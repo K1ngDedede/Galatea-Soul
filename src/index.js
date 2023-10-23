@@ -5,6 +5,7 @@ const fs = require('fs');
 const dotenv = require('dotenv');
 const { Client, GatewayIntentBits, Partials, Collection } = require('discord.js');
 const { Player } = require('discord-player');
+const { exec } = require('node:child_process');
 const express = require('express');
 require('console-stamp')(console, { format: ':date(yyyy/mm/dd HH:MM:ss)' });
 
@@ -37,7 +38,32 @@ client.player = new Player(client, {
 
 const player = client.player;
 
+//sends a kill 1 command to the child node if there is a 429 error
+client.on("debug", function(info) {
+  let check429error = info.split(" ");
+  if (check429error[2] === `429`) {
+    console.log(`Caught a 429 error!`);
+    exec('kill 1', (err, output) => {
+      if (err) {
+        console.error("could not execute command: ", err);
+        return
+      }
+      console.log(`Kill 1 command succeeded`);
+    });
+  }
+});
 
+const timeout = setTimeout(() => {
+  console.log(`Connection to Discord timed out!`);
+  console.log(`Sending to GY...`);
+  exec('kill 1', (err, output) => {
+    if (err) {
+      console.error("could not execute command: ", err);
+      return
+    }
+    console.log(`Kill 1 command succeeded`);
+  });
+}, 32000);
 
 
 const setEnvironment = () => {
@@ -181,6 +207,7 @@ Promise.resolve()
     .then(() => {
         console.log(`${cst.color.green}*** All loaded successfully ***${cst.color.white}`);
         client.login(ENV.TOKEN);
+        clearTimeout(timeout)
     });
 
 
